@@ -4,7 +4,7 @@ from torch.nn import functional as F
 import matplotlib.pyplot as plt
 
 block_size=128
-batch_size=32
+batch_size=3
 max_steps=5000
 eval_interval=500
 lr=3e-4
@@ -191,38 +191,3 @@ print('\n second generation')
 print(decode(model.generate(context,max_new_tokens=500)[1]))
 
 
-
-# step0  train_loss 4.26686 and validation_loss is 4.26062
-# step500  train_loss 2.65473 and validation_loss is 2.66813
-# step1000  train_loss 2.50300 and validation_loss is 2.51350
-# step1500  train_loss 2.42030 and validation_loss is 2.43303
-# step2000  train_loss 2.38351 and validation_loss is 2.40324
-# step2500  train_loss 2.34365 and validation_loss is 2.35963
-# step3000  train_loss 2.31878 and validation_loss is 2.34562
-# step3500  train_loss 2.28596 and validation_loss is 2.31826
-# step4000  train_loss 2.27834 and validation_loss is 2.30968
-# step4500  train_loss 2.26485 and validation_loss is 2.28830
-
-# step0  train_loss 4.61728 and validation_loss is 4.61589
-# step500  train_loss 2.36120 and validation_loss is 2.39303
-# step1000  train_loss 2.23126 and validation_loss is 2.26866
-# step1500  train_loss 2.16700 and validation_loss is 2.20171
-# step2000  train_loss 2.11482 and validation_loss is 2.17714
-# step2500  train_loss 2.09351 and validation_loss is 2.15185
-# step3000  train_loss 2.04239 and validation_loss is 2.13744
-# step3500  train_loss 2.02750 and validation_loss is 2.11864
-# step4000  train_loss 2.02627 and validation_loss is 2.10695
-# step4500  train_loss 1.99220 and validation_loss is 2.08844
-
-
-
-# step0  train_loss 4.19931 and validation_loss is 4.19753
-# step500  train_loss 2.50559 and validation_loss is 2.50502
-# step1000  train_loss 2.35493 and validation_loss is 2.37058
-# step1500  train_loss 2.26379 and validation_loss is 2.29113
-# step2000  train_loss 2.19128 and validation_loss is 2.23382
-# step2500  train_loss 2.16184 and validation_loss is 2.19825
-# step3000  train_loss 2.13765 and validation_loss is 2.17829
-# step3500  train_loss 2.11278 and validation_loss is 2.17630
-# step4000  train_loss 2.09589 and validation_loss is 2.16821
-# step4500  train_loss 2.08342 and validation_loss is 2.15595
