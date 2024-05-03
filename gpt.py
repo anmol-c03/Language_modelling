@@ -88,7 +88,7 @@ class Multiplehead(nn.Module):
     def __init__(self,num_heads,head_dim) :
         super().__init__()
         self.heads=nn.ModuleList([head(n_emb,head_dim) for _ in range(num_heads)])
-        self.proj=nn.Linear(n_emb,n_emb)
+        self.proj=nn.Linear(n_emb,n_emb) #projection layer
         self.dropout=nn.Dropout(dropout)
     
     def forward(self,x):
@@ -102,7 +102,7 @@ class FeedForward_NN(nn.Module):
         self.ffnn=nn.Sequential(
             nn.Linear(n_emb,4*n_emb),
             nn.ReLU(),
-            nn.Linear(4*n_emb,n_emb),
+            nn.Linear(4*n_emb,n_emb), #projection layer 
             nn.Dropout(dropout)
         )
     
@@ -116,8 +116,8 @@ class Blocks(nn.Module):
         heads_dim=n_emb//num_heads
         self.sa_head=Multiplehead(num_heads,heads_dim)
         self.feedforwd_nn=FeedForward_NN(n_emb)
-        self.ln1=nn.Linear(n_emb,n_emb)
-        self.ln2=nn.Linear(n_emb,n_emb)
+        self.ln1=nn.LayerNorm(n_emb,n_emb)
+        self.ln2=nn.LayerNorm(n_emb,n_emb)
     
     def forward(self,x):
         x = x + self.sa_head(self.ln1(x))
