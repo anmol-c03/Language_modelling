@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 block_size=128
 batch_size=3
-max_steps=5000
+max_steps=5000      
 eval_interval=500
 lr=3e-4
 device='cuda' if torch.cuda.is_available() else 'cpu'
