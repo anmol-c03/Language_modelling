@@ -3,74 +3,26 @@ import torch.nn as nn
 from torch.nn import functional as F
 import matplotlib.pyplot as plt
 import math
+import inspect
+from data_prep import get_batch,vocab_size
 
-block_size=128
-batch_size=3
-eval_iters=300
-device='cuda' if torch.cuda.is_available() else 'cpu'
+block_size=8
 n_emb=128
 n_hidden=200
 num_blocks=4
 dropout=0.2
 n_head=4
-#for optimizer
-lr=3e-4
-betas=(0.9, 0.999)
-wt_decay=0.1
+
 #------------------------------------------------------------------------------------------------------------------------------
 torch.manual_seed(1334)
-# reading input data
-text=open('input.txt','r',encoding='utf-8').read()
 
-#character vocabulary 
-ch=sorted(set(text))
-vocab_size=len(ch)
-
-# mapping from characters to integers
-stoi={s:i for i,s in enumerate(ch)}
-itos={i:s for s,i in stoi.items()}
-
-# encoder and decoder for tokens
-encode= lambda s:torch.tensor(list(stoi[i] for i in s),dtype=torch.long)
-decode=lambda i:(''.join(itos[s.item()] for s in i))
-
-#encoding data
-data=encode(text)
-
-#train_val split
-n=int(0.9*len(data))
-train_data=data[:n]
-val_data=data[n:]
-
-#creating input batches
-def get_batch(split):
-    data=train_data if split =='train' else val_data
-    ix=torch.randint(len(data)-block_size,(batch_size,))
-    x=torch.stack([data[i:block_size+i] for i in ix])
-    y=torch.stack([data[i+1:block_size+i+1] for i in ix])
-    x,y=x.to(device),y.to(device)
-    return x,y
-
-@torch.no_grad()
-def loss_estimation():
-    out={}
-    model.eval()
-    for split in ['train','val']:
-        losses=torch.zeros(eval_iters)
-        for k in range(eval_iters):
-            xb,yb=get_batch(split)
-            _,loss=model(xb,yb)
-            losses[k]=loss
-        out[split]=losses.mean()
-    model.train()
-    return out
 
 class  self_attention(nn.Module):
     def __init__(self):
         super().__init__()
-        self.query=nn.Linear(n_emb,n_head,bias=False)
-        self.key=nn.Linear(n_emb,n_head,bias=False)
-        self.value=nn.Linear(n_emb,n_head,bias=False)
+        self.query=nn.Linear(n_emb,n_emb,bias=False)
+        self.key=nn.Linear(n_emb,n_emb,bias=False)
+        self.value=nn.Linear(n_emb,n_emb,bias=False)
         self.c_proj = nn.Linear(n_emb, n_emb)
         self.register_buffer('tril',torch.tril(torch.ones(block_size,block_size)))
         self.register_buffer(
@@ -98,12 +50,12 @@ class  self_attention(nn.Module):
         
 
 class FeedForward_NN(nn.Module):
-    def __init__(self, config):
+    def __init__(self):
         super().__init__()
-        self.c_fc    = nn.Linear(config.n_embd, 4 * config.n_embd)
+        self.c_fc    = nn.Linear(n_emb, 4 * n_emb)
         self.gelu    = nn.GELU()
-        self.c_proj  = nn.Linear(4 * config.n_embd, config.n_embd)
-        self.dropout = nn.Dropout(config.dropout)
+        self.c_proj  = nn.Linear(4 * n_emb, n_emb)
+        self.dropout = nn.Dropout(dropout)
     
     def forward(self,x):
         x=self.c_fc(x)
@@ -117,7 +69,7 @@ class Blocks(nn.Module):
         super().__init__()
         heads_dim=n_emb//num_heads
         self.sa_head=self_attention()
-        self.feedforwd_nn=FeedForward_NN(n_emb)
+        self.feedforwd_nn=FeedForward_NN()
         self.ln1=nn.LayerNorm(n_emb,n_emb)
         self.ln2=nn.LayerNorm(n_emb,n_emb)
     
@@ -157,7 +109,7 @@ class LanguageModel(nn.Module):
         """
         n_params = sum(p.numel() for p in self.parameters())
         if non_embedding:
-            n_params -= self.position_emdedding_table.weight.numel()
+            n_params -= self.position_embedding_table.weight.numel()
         return n_params
 
     def _init_weights(self, module):
@@ -168,21 +120,20 @@ class LanguageModel(nn.Module):
         elif isinstance(module, nn.Embedding):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
 
-
     def config_optimizer(self,weight_decay,lr,betas):
         params={pn:p for pn,p in self.named_parameters()}
         params={pn:p for pn,p in params.items() if p.requires_grad}
-        decayed_points={p for pn,p in params.items() if p.dim()>=2}
-        non_decayed_points={p for pn,p in params.items() if p.dim()<2}
+        decayed_points=[p for pn,p in params.items() if p.dim()>=2]
+        non_decayed_points=[p for pn,p in params.items() if p.dim()<2]
         optimizer_groups=[
             {'params':decayed_points,'weight_decay':weight_decay},
-            {'params':non_decayed_points,'weight_decay':0}
-        ]
+            {'params':non_decayed_points,'weight_decay':0}]
         num_decay_params=sum(p.numel() for p in decayed_points)
         num_nodecay_params=sum(p.numel() for p in non_decayed_points)
         print(f'there are {len(decayed_points)} decayed_params with total num of parameters = {num_decay_params}')
         print(f'there are {len(non_decayed_points)} non_decayed_params with total num of parameters = {num_nodecay_params}')
-        optimizer=torch.optim.AdamW(optimizer_groups,betas=betas,lr=lr)
+        optimizer=torch.optim.AdamW(optimizer_groups,lr=lr,betas=betas)
+
         return optimizer
 
     def forward(self,idx,target=None):
@@ -217,7 +168,4 @@ class LanguageModel(nn.Module):
             idx=torch.cat((idx,idx_next),dim=1)
         return idx 
 
-model=LanguageModel()
-#defining optimizer
-optimizer= model.config_optimizer(wt_decay, lr, betas)
 
