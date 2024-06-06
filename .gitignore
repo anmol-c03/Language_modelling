@@ -1,0 +1,5 @@
+# Ignore Jupyter Notebook checkpoints
+*/notebook/.ipynb_checkpoints/
+
+# Ignore generated files in src directory
+src/decode_transformer/__pycache__/
