@@ -63,7 +63,9 @@ The `transformer_model` module implements the core components of the GPT-2 model
 
 ## References
 Attention mechanism https://arxiv.org/pdf/1706.03762 by Vaswani et al.
+
 weight tying concpets https://arxiv.org/pdf/1608.05859v3
+
 nanoGPT https://github.com/karpathy/nanoGPT
 
 
