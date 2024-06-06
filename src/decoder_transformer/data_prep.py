@@ -1,7 +1,7 @@
 import torch
 
 # reading input data
-text=open('Language_models/gpt_2/input.txt','r',encoding='utf-8').read()
+text=open('/Users/anmolchalise/Desktop/language_modelling/Language_models/gpt_2/input.txt','r',encoding='utf-8').read()
 
 #character vocabulary 
 ch=sorted(set(text))
