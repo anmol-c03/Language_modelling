@@ -24,7 +24,6 @@ class  self_attention(nn.Module):
         self.key=nn.Linear(n_emb,n_emb,bias=False)
         self.value=nn.Linear(n_emb,n_emb,bias=False)
         self.c_proj = nn.Linear(n_emb, n_emb)
-        self.register_buffer('tril',torch.tril(torch.ones(block_size,block_size)))
         self.register_buffer(
             "tril", 
             torch.tril(torch.ones(block_size, block_size))
@@ -37,9 +36,11 @@ class  self_attention(nn.Module):
         q=self.query(x) #(B,T,nhead)
         k=self.key(x)   #(B,T,nhead)
         v=self.value(x)  #(B,T,nhead)
-        k = k.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
-        q = q.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
-        v = v.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
+        
+        q = q.view(B, T, self.n_head, -1).permute(0, 2, 1, 3) # (B, nh, T, hs)
+        k = k.view(B, T, self.n_head, -1).permute(0, 2, 1, 3) # (B, nh, T, hs)
+        v = v.view(B, T, self.n_head, -1).permute(0, 2, 1, 3) # (B, nh, T, hs)
+
         wei = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(k.size(-1)))#(B,T,T)
         wei=wei.masked_fill(self.tril[:,:,:T,:T]==0,float('-inf'))
         wei=F.softmax(wei,-1)
@@ -70,8 +71,8 @@ class Blocks(nn.Module):
         heads_dim=n_emb//num_heads
         self.sa_head=self_attention()
         self.feedforwd_nn=FeedForward_NN()
-        self.ln1=nn.LayerNorm(n_emb,n_emb)
-        self.ln2=nn.LayerNorm(n_emb,n_emb)
+        self.ln1=nn.LayerNorm(n_emb)
+        self.ln2=nn.LayerNorm(n_emb)
     
     def forward(self,x):
         x = x + self.sa_head(self.ln1(x))
@@ -93,8 +94,9 @@ class LanguageModel(nn.Module):
         self.apply(self._init_weights)
 
         for pn, p in self.named_parameters():
+            std=0.02/math.sqrt(2 * num_blocks)
             if pn.endswith('c_proj.weight'):
-                torch.nn.init.normal_(p, mean=0.0, std=0.02/math.sqrt(2 * num_blocks))
+                torch.nn.init.normal_(p, mean=0.0, std=std)
 
         print("number of parameters: %.2fM" % (self.get_num_params()/1e6,))
 
@@ -163,7 +165,7 @@ class LanguageModel(nn.Module):
             idx_cond=idx[:,-block_size:]
             logits,loss=self(idx_cond)
             logits=logits[:,-1,:]
-            prob=F.softmax(logits,dim=1)
+            prob=F.softmax(logits,dim=-1)
             idx_next=torch.multinomial(prob,num_samples=1)  
             idx=torch.cat((idx,idx_next),dim=1)
         return idx 
