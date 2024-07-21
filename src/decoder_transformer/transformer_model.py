@@ -12,6 +12,9 @@ n_hidden=200
 num_blocks=4
 dropout=0.2
 n_head=4
+use_cache=True # for this implementation i am disabling KV caching if necessary one can set it to True
+                # and thus will be enabled
+
 
 #------------------------------------------------------------------------------------------------------------------------------
 torch.manual_seed(1334)
@@ -30,9 +33,12 @@ class  self_attention(nn.Module):
             .view(1, 1, block_size, block_size), persistent=False)
         self.dropout=nn.Dropout(dropout)
         self.n_head=n_head
+        self.use_cache=use_cache
+        self.KV_cache=None
 
-    def forward(self,x):
+    def forward(self,x,use_cache=False):
         B,T,C=x.shape
+
         q=self.query(x) #(B,T,nhead)
         k=self.key(x)   #(B,T,nhead)
         v=self.value(x)  #(B,T,nhead)
@@ -41,7 +47,18 @@ class  self_attention(nn.Module):
         k = k.view(B, T, self.n_head, -1).permute(0, 2, 1, 3) # (B, nh, T, hs)
         v = v.view(B, T, self.n_head, -1).permute(0, 2, 1, 3) # (B, nh, T, hs)
 
+        if not self.training and self.use_cache :
+            if self.KV_cache:
+                self.KV_cache['k']=torch.cat((self.KV_cache['k'],k),dim=2)
+                self.KV_cache['v']=torch.cat((self.KV_cache['v'],v),dim=2)
+                k = self.kv_cache['k']
+                v = self.kv_cache['v']
+            else:
+                self.kv_cache = {'k': k, 'v': v}
+
         wei = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(k.size(-1)))#(B,T,T)
+
+
         wei=wei.masked_fill(self.tril[:,:,:T,:T]==0,float('-inf'))
         wei=F.softmax(wei,-1)
         wei=self.dropout(wei)
@@ -93,10 +110,13 @@ class LanguageModel(nn.Module):
 
         self.apply(self._init_weights)
 
+        self.use_cache=use_cache
+
         for pn, p in self.named_parameters():
             std=0.02/math.sqrt(2 * num_blocks)
             if pn.endswith('c_proj.weight'):
                 torch.nn.init.normal_(p, mean=0.0, std=std)
+
 
         print("number of parameters: %.2fM" % (self.get_num_params()/1e6,))
 
@@ -161,13 +181,18 @@ class LanguageModel(nn.Module):
     
     @torch.no_grad()
     def generate(self,idx,max_new_tokens):
+        self.eval()
         for i in range(max_new_tokens):
-            idx_cond=idx[:,-block_size:]
+            if self.use_cache:
+                idx_cond=idx[:,-1:]
+            else:
+                idx_cond=idx[:,-block_size:]
             logits,loss=self(idx_cond)
             logits=logits[:,-1,:]
             prob=F.softmax(logits,dim=-1)
             idx_next=torch.multinomial(prob,num_samples=1)  
             idx=torch.cat((idx,idx_next),dim=1)
+        self.train()
         return idx 
 
 
