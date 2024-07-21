@@ -12,7 +12,7 @@ n_hidden=200
 num_blocks=4
 dropout=0.2
 n_head=4
-use_cache=True # for this implementation i am disabling KV caching if necessary one can set it to True
+use_cache=False # for this implementation i am disabling KV caching if necessary one can set it to True
                 # and thus will be enabled
 
 
