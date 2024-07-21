@@ -14,6 +14,7 @@ batch_size=32
 lr=3e-4
 betas=(0.9, 0.999)
 wt_decay=0.1
+
 #loss _calc
 
 @torch.no_grad()
@@ -48,7 +49,35 @@ for iters in range(max_steps):
     loss.backward()
     optimizer.step()
 
+
+
+import time
+
+t0=time.time()
+
 print('First Generation ---->')
-print(decode(model.generate(torch.zeros((2,1),dtype=torch.long),max_new_tokens=500)[0]))
+print(decode(model.generate(torch.zeros((1,1),dtype=torch.long),max_new_tokens=1000)[0]))
+
+print('time taken',time.time()-t0)
 print('Second Generation ---->')
 print(decode(model.generate(torch.zeros((2,1),dtype=torch.long),max_new_tokens=500)[1]))
+'''
+without training model when the weights are random, i inferred model to get output and following were 
+observations regarding usage of KV cache
+w/o KV cache
+for 10 tokens time taken 0.07384586334228516
+for 100 tokens time taken 0.12468314170837402
+for 1000 tokens time taken 2.203747272491455
+
+kv cache
+for 10 tokens time taken 0.04920196533203125
+for 100 tokens time taken 0.08963203430175781
+for 1000 tokens time taken 1.2654902935028076
+
+This clearly shows that implementations of KV was succesful and memory compensate inference time
+
+
+If anyone interested in observing kv cache implementation, one should just comment out all the lines
+except 1,2,34, 53-60 and comment out other lines and make use_cache =True in transformer_model.py
+'''
+
