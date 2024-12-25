@@ -26,7 +26,7 @@ git clone https://github.com/anmol-c03/Language_modelling.git
 
 2. Navigate to the project directory:
 ```bash
-cd gpt_2
+cd Language_modelling
 ```
 
 
